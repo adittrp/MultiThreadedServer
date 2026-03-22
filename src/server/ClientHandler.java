@@ -67,10 +67,7 @@ public class ClientHandler implements Runnable {
 
                 ChatRoom lobby = serverState.getOrCreateRoom("lobby");
                 lobby.addMember(this);
-
-
                 sendMessage("[SYSTEM] Username accepted. You joined lobby.");
-                lobby.broadcast("[SYSTEM] " + username + " joined the room.");
 
                 System.out.println(username + " logged in");
                 break;
@@ -94,7 +91,7 @@ public class ClientHandler implements Runnable {
         }
 
         ChatRoom room = serverState.getOrCreateRoom(currentRoom);
-        room.broadcast("[PUBLIC][" + currentRoom + "] " + username + ": " + input);
+        room.broadcast("[PUBLIC][" + currentRoom + "] " + username + ": " + input, username);
     }
 
     public void sendMessage(String message) {
@@ -112,7 +109,14 @@ public class ClientHandler implements Runnable {
     }
 
     public void setCurrentRoom(String room) {
+        ChatRoom oldRoom = serverState.getRoom(currentRoom);
+        oldRoom.removeMember(this);
+
         currentRoom = room;
+        ChatRoom newRoom = serverState.getOrCreateRoom(currentRoom);
+        newRoom.addMember(this);
+
+        sendMessage("[SYSTEM] You moved to room '" + room + "'");
     }
 
     private void disconnect() {
@@ -128,8 +132,7 @@ public class ClientHandler implements Runnable {
                 ChatRoom room = serverState.getRoom(currentRoom);
                 if (room != null) {
                     room.removeMember(this);
-                    serverState.removeRoomIfEmpty(currentRoom);
-                    room.broadcast("[SYSTEM] " + username + " left the room,");
+                    room.broadcast("[SYSTEM] " + username + " left the room", username);
                 }
 
                 serverState.removeUser(username);

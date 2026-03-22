@@ -1,6 +1,7 @@
 package server;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +29,8 @@ public class ChatServer {
             pool = java.util.concurrent.Executors.newCachedThreadPool();
             running = true;
 
-            System.out.println("Server started on port: " + port);
+            System.out.println("Server started on port: " + serverSocket.getLocalPort());
+            System.out.println("Server IP: " + InetAddress.getLocalHost().getHostAddress());
 
             while (running) {
                 try {
@@ -86,7 +88,7 @@ public class ChatServer {
         new Thread(server::start).start();
 
         Scanner sc = new Scanner(System.in);
-        System.out.print("Enter in 'exit' to stop the server: ");
+        System.out.println("Enter in 'exit' to stop the server.");
         while (true) {
             String message = sc.nextLine();
             if (message.equalsIgnoreCase("exit")) {
@@ -94,9 +96,6 @@ public class ChatServer {
                 server.stop();
                 break;
             }
-
-            System.out.print("Enter in 'exit' to stop the server: ");
-
         }
 
         sc.close();

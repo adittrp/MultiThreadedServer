@@ -9,7 +9,7 @@ import java.util.Scanner;
 
 public class SimpleChatClient {
     public static void main(String[] args) {
-        String host = "localhost";
+        String host = "192.168.1.197";
         int port = 5000;
 
         try (

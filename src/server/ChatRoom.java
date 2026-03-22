@@ -19,14 +19,19 @@ public class ChatRoom {
 
     public void addMember(ClientHandler client) {
         members.add(client);
+        broadcast("[SYSTEM] " + client.getUsername() + " joined the room.", client.getUsername());
     }
 
     public void removeMember(ClientHandler client) {
         members.remove(client);
+        broadcast("[SYSTEM] " + client.getUsername() + " left the room.", client.getUsername());
     }
 
-    public void broadcast(String message) {
+    public void broadcast(String message, String sender) {
         for (ClientHandler client : members) {
+            if (client.getUsername().equals(sender)) {
+                continue;
+            }
             client.sendMessage(message);
         }
     }
