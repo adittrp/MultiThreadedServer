@@ -1,8 +1,10 @@
 package server;
 
-import java.io.IOException;
+import database.DatabaseManager;
+
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.sql.SQLException;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -13,17 +15,28 @@ public class ChatServer {
     private ExecutorService pool;
     private final ServerState serverState;
 
+    private final DatabaseManager db;
+
     // Volatile makes sure changes to running in one thread are seen in other threads too
     private volatile boolean running;
 
     public ChatServer(int port, ServerState serverState) {
         this.port = port;
         this.serverState = serverState;
+        db = new DatabaseManager();
     }
 
     public void start() {
         try {
             serverSocket = new ServerSocket(port);
+
+            try {
+                db.connect();
+                db.initialize();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return;
+            }
 
             // a Cached thread pool creates threads as needed, resuses old ones if possible, and grows dynamically
             pool = java.util.concurrent.Executors.newCachedThreadPool();
@@ -67,6 +80,8 @@ public class ChatServer {
             if (pool != null && !pool.isShutdown()) {
                 pool.shutdownNow();
             }
+
+            db.close();
 
             System.out.println("Server stopped");
 
