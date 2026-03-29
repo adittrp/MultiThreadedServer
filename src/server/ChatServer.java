@@ -1,6 +1,8 @@
 package server;
 
+import database.AuthService;
 import database.DatabaseManager;
+import database.UserRepository;
 
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -37,6 +39,8 @@ public class ChatServer {
                 e.printStackTrace();
                 return;
             }
+            UserRepository userRepository = new UserRepository(db.getConnection());
+            AuthService authService = new AuthService(userRepository);
 
             // a Cached thread pool creates threads as needed, resuses old ones if possible, and grows dynamically
             pool = java.util.concurrent.Executors.newCachedThreadPool();
@@ -51,7 +55,7 @@ public class ChatServer {
                     var socket = serverSocket.accept();
                     System.out.println("Client connected");
 
-                    ClientHandler handler = new ClientHandler(socket, serverState);
+                    ClientHandler handler = new ClientHandler(socket, serverState, authService);
 
                     // hands client task to thread pool so main server loop can go back to waiting for more clients
                     pool.submit(handler);

@@ -14,8 +14,8 @@ public class ServerState {
         this.rooms = rooms;
     }
 
-    public boolean addUser(String username, ClientHandler client) {
-        return users.putIfAbsent(username, client) == null;
+    public void addUser(String username, ClientHandler client) {
+        users.putIfAbsent(username, client);
     }
 
     public void removeUser(String username) {

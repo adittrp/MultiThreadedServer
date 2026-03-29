@@ -1,5 +1,8 @@
 package server;
 
+import database.AuthService;
+import model.AuthResult;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -14,9 +17,12 @@ public class ClientHandler implements Runnable {
     private String currentRoom;
     private boolean connected;
 
-    public ClientHandler(Socket socket, ServerState serverState) {
+    private final AuthService authService;
+
+    public ClientHandler(Socket socket, ServerState serverState, AuthService authService) {
         this.socket = socket;
         this.serverState = serverState;
+        this.authService = authService;
     }
 
     @Override
@@ -41,36 +47,95 @@ public class ClientHandler implements Runnable {
     private void login() {
         try {
             sendMessage("[SYSTEM] Welcome to the server!");
-            sendMessage("[SYSTEM] Enter a username: ");
+            sendMessage("[SYSTEM] Do you want to register or login?");
+
+            boolean registering = false;
 
             while (true) {
-                String inputName = reader.readLine();
+                String input = reader.readLine();
 
-                if (inputName == null) {
+                if (input == null) {
                     return;
                 }
 
-                inputName = inputName.trim();
-                if (inputName.isEmpty()) {
-                    sendMessage("[SYSTEM] Username cannot be empty, try again: ");
+                input = input.trim();
+
+                if (input.equalsIgnoreCase("register")) {
+                    registering = true;
+                } else if (input.equalsIgnoreCase("login")) {
+                    registering = false;
+                } else {
+                    sendMessage("[SYSTEM] Type 'register' or 'login':");
                     continue;
                 }
 
-                if (!serverState.addUser(inputName, this)) {
-                    sendMessage("[SYSTEM] Username already exists, try again: ");
-                    continue;
-                }
+                AuthResult result;
+                String enteredUsername;
+                String enteredPassword;
 
-                username = inputName;
-                currentRoom = "lobby";
-                connected = true;
+                do {
+                    sendMessage("[SYSTEM] Enter a username:");
+                    while (true) {
+                        input = reader.readLine();
 
-                ChatRoom lobby = serverState.getOrCreateRoom("lobby");
-                lobby.addMember(this);
-                sendMessage("[SYSTEM] Username accepted. You joined lobby.");
+                        if (input == null) {
+                            return;
+                        }
 
-                System.out.println(username + " logged in");
-                break;
+                        input = input.trim();
+
+                        if (input.isEmpty()) {
+                            sendMessage("[SYSTEM] Username cannot be empty, try again:");
+                            continue;
+                        }
+
+                        enteredUsername = input;
+                        break;
+                    }
+
+                    sendMessage("[SYSTEM] Enter a password:");
+                    while (true) {
+                        input = reader.readLine();
+
+                        if (input == null) {
+                            return;
+                        }
+
+                        input = input.trim();
+
+                        if (input.isEmpty()) {
+                            sendMessage("[SYSTEM] Password cannot be empty, try again:");
+                            continue;
+                        }
+
+                        enteredPassword = input;
+                        break;
+                    }
+
+                    if (registering) {
+                        result = authService.register(enteredUsername, enteredPassword);
+                    } else {
+                        result = authService.login(enteredUsername, enteredPassword);
+                    }
+
+                    sendMessage("[SYSTEM] " + result.getMessage());
+
+                    if (result.isSuccess()) {
+                        this.username = result.getUser().getUsername();
+                        currentRoom = "lobby";
+                        connected = true;
+
+                        ChatRoom lobby = serverState.getOrCreateRoom("lobby");
+                        lobby.addMember(this);
+
+                        serverState.addUser(this.username, this);
+
+                        sendMessage("[SYSTEM] Authentication successful. You joined lobby.");
+                        System.out.println(this.username + " logged in");
+                        return;
+                    }
+
+                } while (!result.isSuccess());
             }
 
         } catch (Exception e) {
@@ -132,7 +197,6 @@ public class ClientHandler implements Runnable {
                 ChatRoom room = serverState.getRoom(currentRoom);
                 if (room != null) {
                     room.removeMember(this);
-                    room.broadcast("[SYSTEM] " + username + " left the room", username);
                 }
 
                 serverState.removeUser(username);
